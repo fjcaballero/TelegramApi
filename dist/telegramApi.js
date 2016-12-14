@@ -1,5 +1,5 @@
 /**
- * telegram-api v1.2.9
+ * telegram-api v1.2.8
  * Infinnity Solutions
  */
 (function(){
@@ -593,11 +593,6 @@ function FileSaverModule($timeout) {
         var a = document.createElement('a');
         var blob = new Blob(bytes, {type: 'octet/stream'});
 
-        if (window.navigator && window.navigator.msSaveBlob) {
-            window.navigator.msSaveBlob(blob, fileName);
-            return;
-        }
-
         document.body.appendChild(a);
 
         a.style = 'display: none';
@@ -605,7 +600,7 @@ function FileSaverModule($timeout) {
         a.download = fileName;
         a.click();
 
-        $timeout(function() {
+        $timeout(function () {
             window.URL.revokeObjectURL(a.href);
             a.remove();
         }, 100);
@@ -4584,6 +4579,7 @@ function TelegramApiModule(MtpApiManager, AppPeersManager, MtpApiFileManager, Ap
         getPeerByID: getPeerByID,
         getUserInfo: getUserInfo,
         getUserPhoto: getUserPhoto,
+        getPhoto: getPhoto,
         joinChat: joinChat,
         sendCode: sendCode,
         sendFile: sendFile,
@@ -4600,7 +4596,7 @@ function TelegramApiModule(MtpApiManager, AppPeersManager, MtpApiFileManager, Ap
         invokeApi: invokeApi,
         dT: dT,
 
-        VERSION: '1.2.9'
+        VERSION: '1.2.8'
     };
 
     /**
@@ -4869,6 +4865,46 @@ function TelegramApiModule(MtpApiManager, AppPeersManager, MtpApiFileManager, Ap
                 }
             });
         });
+    }
+
+    /**
+     * @function getUserPhoto
+     * @description Get user photo
+     * @param {String} [type] - Photo type (values: byteArray (default), base64, blob)
+     * @param {String} [size] - Photo size (values: big (default), small)
+     * @example <%example:getUserPhoto.js%>
+     */
+    function getPhoto(type, photo) {
+
+      var location = {
+          _: "inputFileLocation",
+          local_id: photo.local_id,
+          secret: photo.secret,
+          volume_id: photo.volume_id
+      };
+      var params = {
+          dcID: photo.dc_id,
+          fileDownload: true,
+          singleInRequest: window.safari !== undefined,
+          createNetworker: true
+      };
+
+      return MtpApiManager.invokeApi('upload.getFile', {
+          location: location,
+          offset: 0,
+          limit: 524288
+      }, params).then(function(result) {
+          switch (type) {
+              case 'byteArray':
+                  return result.bytes;
+              case 'base64':
+                  return "data:image/jpeg;base64," + btoa(String.fromCharCode.apply(null, result.bytes));
+              case 'blob':
+                  return new Blob([result.bytes], {type: 'image/jpeg'});
+              default:
+                  return result.bytes;
+          }
+      });
     }
 
     /**
